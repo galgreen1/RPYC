@@ -1,5 +1,7 @@
 import requests
-from RPYC.server_constants import MODULE_REQUEST
+from RPYC.server_constants import MODULE_REQUEST, MODULE_NAME, PROXY
+from RPYC.proxy import Proxy
+import json
 
 
 class RemoteControlConnection:
@@ -8,7 +10,13 @@ class RemoteControlConnection:
             self.base_url = base_url
 
         def __getattr__(self, name):
-            return requests.get(self.base_url + MODULE_REQUEST, data=name).json()
+            response = requests.get(
+                self.base_url + MODULE_REQUEST, data=json.dumps({MODULE_NAME: name})
+            ).json()
+            if type(response) is dict:
+                if PROXY in response.keys():
+                    return Proxy(int(response.get(PROXY)), self.base_url)
+            return response
 
     def __init__(self, ip: str, port: int):
-        self.modules = self.Module(f"https://{ip}/{port}")
+        self.modules = self.Module(f"http://{ip}:{port}")
